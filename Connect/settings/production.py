@@ -13,33 +13,41 @@ env = environ.Env()
 DEBUG = env.bool('DEBUG', default=False)
 
 # ---------------------------------------------------------------------------
-# Database — PostgreSQL via DATABASE_URL
+# Database — PostgreSQL via DATABASE_URL with SQLite fallback
 # ---------------------------------------------------------------------------
 DATABASES = {
-    'default': env.db('DATABASE_URL')
+    'default': env.db('DATABASE_URL', default=f'sqlite:///{BASE_DIR / "db.sqlite3"}')
 }
 
 # ---------------------------------------------------------------------------
-# Channels — Redis channel layer
+# Channels — Redis channel layer with InMemory fallback
 # ---------------------------------------------------------------------------
-REDIS_URL = env('REDIS_URL', default='redis://127.0.0.1:6379/0')
+REDIS_URL = env('REDIS_URL', default=None)
 
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': [REDIS_URL],
-            'capacity': 1500,
-            'expiry': 10,
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [REDIS_URL],
+                'capacity': 1500,
+                'expiry': 10,
+            },
         },
-    },
-}
+    }
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        },
+    }
 
 # ---------------------------------------------------------------------------
-# Celery — Broker & Backend using REDIS_URL
+# Celery — Broker & Backend using REDIS_URL if available
 # ---------------------------------------------------------------------------
-CELERY_BROKER_URL = env('CELERY_BROKER_URL', default=REDIS_URL)
-CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND', default=REDIS_URL)
+if REDIS_URL:
+    CELERY_BROKER_URL = env('CELERY_BROKER_URL', default=REDIS_URL)
+    CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND', default=REDIS_URL)
 
 # ---------------------------------------------------------------------------
 # Email — Console backend fallback if no SMTP configured

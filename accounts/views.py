@@ -83,8 +83,11 @@ def resend_activation(request):
         email = request.POST.get("email", "").strip()
         try:
             user = User.objects.get(email=email, is_active=False)
-            from .tasks import send_activation_email
-            send_activation_email.delay(user.id)
+            try:
+                from .tasks import send_activation_email
+                send_activation_email.delay(user.id)
+            except Exception as e:
+                logger.warning(f"Async email notification skipped: {e}")
         except User.DoesNotExist:
             pass  # prevent email enumeration
         messages.info(request, "If that email is registered, a new activation link has been sent.")
@@ -110,9 +113,11 @@ def forgot_password_view(request):
     """Step 1: user submits their email."""
     if request.method == "POST":
         email = request.POST.get("email", "").strip()
-        # Always dispatch async — prevents timing-based email enumeration.
-        from .tasks import send_password_reset_email
-        send_password_reset_email.delay(email)
+        try:
+            from .tasks import send_password_reset_email
+            send_password_reset_email.delay(email)
+        except Exception as e:
+            logger.warning(f"Async password reset email skipped: {e}")
         messages.info(
             request,
             "If that email is registered, a password reset link has been sent."
