@@ -7,7 +7,7 @@ Django Channels. Used by Daphne in production.
 
 import os
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Connect.settings.development')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Connect.settings.production')
 
 from django.core.asgi import get_asgi_application  # noqa: E402
 
